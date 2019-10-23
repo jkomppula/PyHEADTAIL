@@ -5,6 +5,7 @@
 *.pyc
 build/
 scripts/
+.spyproject/
 *~
 .#*
 #*

@@ -219,7 +219,8 @@ class RigidBeam(object):
 # MACHINE AND SIMULATION SETTINGS
 #================================
 
-n_turns = 150
+#n_turns = 150
+n_turns = 75
 
 n_macroparticles = 1000 # per bunch 
 intensity = 2.3e11
@@ -267,7 +268,7 @@ machine.one_turn_map = machine.one_turn_map[1:]
 filling_scheme = [] # A list of filled buckets
 
 # -- Option 1: Fully filled
-for i in range(h_bunch):
+for i in range(h_bunch-17):
     filling_scheme.append(i)
 
 # -- Option 2: filling scheme
@@ -305,7 +306,9 @@ allbunches_org = copy.deepcopy(allbunches)
 # PyHEADTAIL WAKES
 #=================
 
-mpi_settings = 'linear_mpi_full_ring_fft'
+mpi_settings = 'linear_mpi_optimized_fft'
+mpi_settings_orginal = 'linear_mpi_full_ring_fft'
+#mpi_settings_orginal = True
 #mpi_settings = 'memory_optimized'
 n_turns_wake = 21
 
@@ -328,7 +331,7 @@ wakes = CircularResonator(R_shunt, frequency, Q, n_turns_wake=n_turns_wake)
 wake_field = WakeField(slicer, wakes, mpi=mpi_settings, Q_x=accQ_x, Q_y=accQ_y,
                        beta_x=beta_x, beta_y=beta_y)
 
-wake_field_org = WakeField(slicer, wakes, mpi=True, Q_x=accQ_x, Q_y=accQ_y,
+wake_field_org = WakeField(slicer, wakes, mpi=mpi_settings_orginal, Q_x=accQ_x, Q_y=accQ_y,
                        beta_x=beta_x, beta_y=beta_y)
 #wake_field_org = WakeField(slicer, wakes, mpi='memory_optimized', Q_x=accQ_x, Q_y=accQ_y,
 #                       beta_x=beta_x, beta_y=beta_y)
@@ -370,11 +373,11 @@ if rank == 0:
     ax2.set_xlabel('Z-location [m]')
     ax2.set_ylabel('Bunch mean_y')
     
-    ax3 = fig.add_subplot(gs[1, 0])
+    ax3 = fig.add_subplot(gs[1, 0],sharex = ax1)
     ax3.set_xlabel('Z-location [m]')
     ax3.set_ylabel('Slice-by-slice difference [%]')
     
-    ax4 = fig.add_subplot(gs[1, 1])
+    ax4 = fig.add_subplot(gs[1, 1],sharex = ax2)
     ax4.set_xlabel('Z-location [m]')
     ax4.set_ylabel('Slice-by-slice difference [%]')
   

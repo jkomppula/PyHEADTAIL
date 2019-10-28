@@ -460,7 +460,7 @@ class WakeKick(Printing):
         
         
         # searches the maximum bucket ID number
-        if convolution == 'efficient_linear':
+        if convolution == 'linear_optimized':
             max_bucket = 0
             for slice_set in all_slice_sets:
                 bucket_id = slice_set.bucket_id
@@ -489,16 +489,16 @@ class WakeKick(Printing):
         # total number of bins per turn
         self._n_bins_per_turn = h_bunch * self._n_bins_per_kick
         
-        if convolution == 'efficient_linear':
+        if convolution == 'linear_optimized':
             n_bins_per_wake_turn = max_bucket * self._n_bins_per_kick
         else:
             n_bins_per_wake_turn = self._n_bins_per_turn
 
         # a buffer array for moment data
-        self._moment = np.zeros(self._n_bins_per_turn)
+        self._moment = np.zeros(n_bins_per_wake_turn)
 
         # Raw accumulated data from turn by turn convolutions
-        if convolution == 'linear':
+        if (convolution == 'linear') or (convolution == 'linear_optimized'):
             if self._my_rank == 0:
                 self._accumulated_data = np.zeros(self._n_bins_per_turn*(self.n_turns_wake+1))
             else:
@@ -548,7 +548,7 @@ class WakeKick(Printing):
             # wake functions are initiliazed
 
             # a buffer for the data calculated in this processor
-            if convolution == 'linear' or convolution == 'efficient_linear':
+            if convolution == 'linear' or convolution == 'linear_optimized':
                 self._my_data = np.zeros(2*self._n_bins_per_turn*len(my_wake_turns))
             elif convolution == 'circular':
                 self._my_data = np.zeros(self._n_bins_per_turn*len(my_wake_turns),dtype=complex)
@@ -578,6 +578,8 @@ class WakeKick(Printing):
 
             # FFT convolution requires that the values of z-bins start from
             # zero. Thus, rolls negative z-bins to the end of the array.
+            
+#            if convolution != 'linear_optimized':
             roll_threshold = -1. * bin_width/2.
             n_roll = sum((z_bin_mids < roll_threshold))
             z_values[:n_roll] = z_values[:n_roll]+circumference
@@ -595,7 +597,7 @@ class WakeKick(Printing):
 #                    np.copyto(temp_z[-n_roll:],np.zeros(n_roll))
 #                np.copyto(temp_z[:n_roll],np.zeros(n_roll))
 
-                if convolution == 'linear' or convolution == 'efficient_linear':
+                if convolution == 'linear' or convolution == 'linear_optimized':
                     self._dashed_wake_functions.append(self.wake_function(-(temp_z+turn_offset)/c, beta=local_slice_sets[0].beta))
                 elif convolution == 'circular':
                     rotation_angle = -2.*np.pi*(Q%1.)*z_values/circumference
@@ -649,7 +651,7 @@ class WakeKick(Printing):
                 i_to = 2*(i+1) * self._n_bins_per_turn-1
                 np.copyto(self._my_data[i_from:i_to], fftconvolve(wake,self._moment,'full'))
                 
-        if convolution == 'efficient_linear':
+        elif convolution == 'linear_optimized':
             # TODO: length of the 
             for i, wake in enumerate(self._dashed_wake_functions):
                 new_data = fftconvolve(wake,self._moment,'full')
@@ -675,7 +677,7 @@ class WakeKick(Printing):
                                       optimization_method, moments):
         # Gathers all the calculated wake data in the method 
         # _calculate_field_mpi_full_ring_fft() to the rank 0
-        if convolution == 'linear':
+        if (convolution == 'linear') or  (convolution == 'linear_optimized'):
             old_data_from = self._n_bins_per_turn
             old_data_to = (self.n_turns_wake+1)*self._n_bins_per_turn
             self._new_real_wake_data = self._mpi_array_gather.gather(np.copy(self._my_data), self._new_real_wake_data)
@@ -696,7 +698,7 @@ class WakeKick(Printing):
            
                 
             # accumulates new wake data from the old and new data
-            if convolution == 'linear':
+            if (convolution == 'linear') or  (convolution == 'linear_optimized'):
                 np.copyto(self._accumulated_data,old_data)
                 for i in range(self.n_turns_wake):
                     j_from = i*self._n_bins_per_turn
@@ -714,7 +716,7 @@ class WakeKick(Printing):
 
 
         # shares only the relevan wake kick data with all the processors
-        if convolution == 'linear':
+        if (convolution == 'linear') or  (convolution == 'linear_optimized'):
             if self._my_rank == 0:
                 i_from = 0
                 i_to = self._n_bins_per_turn
@@ -798,6 +800,12 @@ class WakeKick(Printing):
             return  self._accumulate_mpi_full_ring_fft('linear',all_slice_sets, local_slice_sets,
                                                  bunch_list, local_bunch_indexes,
                                                  optimization_method, moments)
+
+        elif optimization_method == 'linear_mpi_optimized_fft':
+
+            return  self._accumulate_mpi_full_ring_fft('linear_optimized',all_slice_sets, local_slice_sets,
+                                                 bunch_list, local_bunch_indexes,
+                                                 optimization_method, moments)
         elif optimization_method == 'dummy':
             if not hasattr(self,'_dummy_values'):
                 self._dummy_values = []
@@ -841,6 +849,15 @@ class WakeKick(Printing):
                                                             Q, beta)
         elif optimization_method == 'linear_mpi_full_ring_fft':
             return  self._calculate_field_mpi_full_ring_fft('linear', all_slice_sets,
+                                                            local_slice_sets,
+                                                            bunch_list,
+                                                            local_bunch_indexes,
+                                                            optimization_method,
+                                                            self._moments,
+                                                            turns_on_this_proc,
+                                                            None, None)
+        elif optimization_method == 'linear_mpi_optimized_fft':
+            return  self._calculate_field_mpi_full_ring_fft('linear_optimized', all_slice_sets,
                                                             local_slice_sets,
                                                             bunch_list,
                                                             local_bunch_indexes,

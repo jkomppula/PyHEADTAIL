@@ -490,12 +490,12 @@ class WakeKick(Printing):
         self._n_bins_per_turn = h_bunch * self._n_bins_per_kick
         
         if convolution == 'linear_optimized':
-            n_bins_per_wake_turn = max_bucket * self._n_bins_per_kick
+            self._n_bins_per_wake_turn = max_bucket * self._n_bins_per_kick
         else:
-            n_bins_per_wake_turn = self._n_bins_per_turn
+            self._n_bins_per_wake_turn = self._n_bins_per_turn
 
         # a buffer array for moment data
-        self._moment = np.zeros(n_bins_per_wake_turn)
+        self._moment = np.zeros(self._n_bins_per_wake_turn)
 
         # Raw accumulated data from turn by turn convolutions
         if (convolution == 'linear') or (convolution == 'linear_optimized'):
@@ -548,8 +548,10 @@ class WakeKick(Printing):
             # wake functions are initiliazed
 
             # a buffer for the data calculated in this processor
-            if convolution == 'linear' or convolution == 'linear_optimized':
+            if convolution == 'linear' :
                 self._my_data = np.zeros(2*self._n_bins_per_turn*len(my_wake_turns))
+            elif convolution == 'linear_optimized':
+                self._my_data = np.zeros(2*self._n_bins_per_wake_turn*len(my_wake_turns))
             elif convolution == 'circular':
                 self._my_data = np.zeros(self._n_bins_per_turn*len(my_wake_turns),dtype=complex)
             else:
@@ -568,7 +570,7 @@ class WakeKick(Printing):
                                    empty_space_per_side, empty_space_per_side)*bin_width)
 
             # determines z-bins for the entire ring
-            z_values = np.zeros(n_bins_per_wake_turn)
+            z_values = np.zeros(self._n_bins_per_wake_turn)
             for i in range(max_bucket):
                 idx_from = i * self._n_bins_per_kick
                 idx_to = (i + 1) * self._n_bins_per_kick
@@ -654,10 +656,9 @@ class WakeKick(Printing):
         elif convolution == 'linear_optimized':
             # TODO: length of the 
             for i, wake in enumerate(self._dashed_wake_functions):
-                new_data = fftconvolve(wake,self._moment,'full')
-                i_from = 2*i*self._n_bins_per_turn
-                i_to = i_from + len(new_data)
-                np.copyto(self._my_data[i_from:i_to], new_data)
+                i_from = 2*i*self._n_bins_per_wake_turn
+                i_to = 2*(i+1)*self._n_bins_per_wake_turn-1
+                np.copyto(self._my_data[i_from:i_to], fftconvolve(wake,self._moment,'full'))
             
         elif convolution == 'circular':
 
@@ -702,9 +703,9 @@ class WakeKick(Printing):
                 np.copyto(self._accumulated_data,old_data)
                 for i in range(self.n_turns_wake):
                     j_from = i*self._n_bins_per_turn
-                    j_to = (i+2)*self._n_bins_per_turn
-                    k_from = 2*i*self._n_bins_per_turn
-                    k_to = 2*(i+1)*self._n_bins_per_turn
+                    j_to = j_from + 2*self._n_bins_per_wake_turn
+                    k_from = 2*i*self._n_bins_per_wake_turn
+                    k_to = k_from + 2*self._n_bins_per_wake_turn
                     self._accumulated_data[j_from:j_to] = self._accumulated_data[j_from:j_to] + self._new_real_wake_data[k_from:k_to]
                 
             elif convolution == 'circular':

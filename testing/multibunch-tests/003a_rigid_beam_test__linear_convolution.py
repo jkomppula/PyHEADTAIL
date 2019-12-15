@@ -220,7 +220,7 @@ class RigidBeam(object):
 #================================
 
 #n_turns = 150
-n_turns = 75
+n_turns = 30
 
 n_macroparticles = 1000 # per bunch 
 intensity = 2.3e11
@@ -235,7 +235,7 @@ accQ_y = 60.32
 Q_s = 2.1e-3
 chroma=0
 
-h_bunch = 27
+h_bunch = 270
 h_RF = h_bunch*10
 
 #circumference = 25e-9*c*h_bunch
@@ -268,13 +268,13 @@ machine.one_turn_map = machine.one_turn_map[1:]
 filling_scheme = [] # A list of filled buckets
 
 # -- Option 1: Fully filled
-for i in range(h_bunch-17):
-    filling_scheme.append(i)
+#for i in range(h_bunch-17):
+#    filling_scheme.append(i)
 
 # -- Option 2: filling scheme
-#for i in range(1):
-#    for j in range(42):
-#        filling_scheme.append(i*50+j)
+for i in range(2):
+    for j in range(42):
+        filling_scheme.append(i*50+j)
 
 # SLICING OPTIONS
 #=================
@@ -286,7 +286,7 @@ bunch_scaping = circumference/float(h_bunch)
 
 # -- Option 2: Multiple slices per bunch
 slicing_fraction = 1./10. # a fraction of bunch spacing sliced
-n_slices_per_bunch = 21 # a number of PyHEADTAIL slices per bunch
+n_slices_per_bunch = 100 # a number of PyHEADTAIL slices per bunch
 
 
 allbunches = machine.generate_6D_Gaussian_bunch(n_macroparticles, intensity,
@@ -307,10 +307,10 @@ allbunches_org = copy.deepcopy(allbunches)
 #=================
 
 mpi_settings = 'linear_mpi_optimized_fft'
-mpi_settings_orginal = 'linear_mpi_full_ring_fft'
+#mpi_settings_orginal = 'linear_mpi_full_ring_fft'
 #mpi_settings_orginal = True
-#mpi_settings = 'memory_optimized'
-n_turns_wake = 21
+mpi_settings_orginal = 'memory_optimized'
+n_turns_wake = 10
 
 # pipe radius [m]
 b = 13.2e-3

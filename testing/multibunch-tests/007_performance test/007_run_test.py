@@ -28,9 +28,9 @@ n_bunches = [
         16,
         24,
         32,
-        46,
+        44,
         64,
-        90,
+        92,
         128,
         180,
         256,
@@ -39,7 +39,8 @@ n_bunches = [
         724,
         1024,
         1448,
-        2048
+        2048,
+        2896
         ]
 
 n_bunches = n_bunches[::-1]
@@ -50,6 +51,9 @@ for n_s in n_slices:
         for filling_scheme in filling_schemes:
             for n_b in n_bunches:
                 if (algoritmh == 'linear_mpi_optimized_fft') or ((n_s==100) and (algoritmh == 'memory_optimized') and (n_b <= 512)):
-                    subprocess.call("./run_local_job.sh 4 " + str(job_counter) +  " " + algoritmh +  " " + filling_scheme +  " " + str(n_b) +  " " + str(n_s), shell=True)
-                    job_counter += 1
+                    n_turns = 100
+                else:
+                    n_turns = 12
+                subprocess.call("./run_local_job.sh 4 " + str(job_counter) +  " " + algoritmh +  " " + filling_scheme +  " " + str(n_b) +  " " + str(n_s)+  " " + str(n_turns), shell=True)
+                job_counter += 1
 print "end"

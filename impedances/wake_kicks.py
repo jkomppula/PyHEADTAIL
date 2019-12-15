@@ -490,7 +490,7 @@ class WakeKick(Printing):
         self._n_bins_per_turn = h_bunch * self._n_bins_per_kick
         
         if convolution == 'linear_optimized':
-            self._n_bins_per_wake_turn = max_bucket * self._n_bins_per_kick
+            self._n_bins_per_wake_turn = np.min([max_bucket * self._n_bins_per_kick * 2, self._n_bins_per_turn])
         else:
             self._n_bins_per_wake_turn = self._n_bins_per_turn
 
@@ -577,6 +577,16 @@ class WakeKick(Printing):
                 offset = (i*bunch_spacing) 
                 temp_mids = z_bin_mids+offset
                 np.copyto(z_values[idx_from:idx_to],temp_mids)
+                
+                if self._n_bins_per_wake_turn < self._n_bins_per_turn:
+                    
+                    idx_from = (i+max_bucket) * self._n_bins_per_kick
+                    idx_to = (i+max_bucket + 1) * self._n_bins_per_kick
+                    offset = ((h_bunch+i-max_bucket)*bunch_spacing) 
+                    temp_mids = z_bin_mids+offset
+                    np.copyto(z_values[idx_from:idx_to],temp_mids)
+                    
+                
 
             # FFT convolution requires that the values of z-bins start from
             # zero. Thus, rolls negative z-bins to the end of the array.
@@ -657,7 +667,7 @@ class WakeKick(Printing):
             # TODO: length of the 
             for i, wake in enumerate(self._dashed_wake_functions):
                 i_from = 2*i*self._n_bins_per_wake_turn
-                i_to = 2*(i+1)*self._n_bins_per_wake_turn-1
+                i_to = 2*i*self._n_bins_per_wake_turn + 2 * self._n_bins_per_wake_turn-1
                 np.copyto(self._my_data[i_from:i_to], fftconvolve(wake,self._moment,'full'))
             
         elif convolution == 'circular':
@@ -702,11 +712,26 @@ class WakeKick(Printing):
             if (convolution == 'linear') or  (convolution == 'linear_optimized'):
                 np.copyto(self._accumulated_data,old_data)
                 for i in range(self.n_turns_wake):
-                    j_from = i*self._n_bins_per_turn
-                    j_to = j_from + 2*self._n_bins_per_wake_turn
-                    k_from = 2*i*self._n_bins_per_wake_turn
-                    k_to = k_from + 2*self._n_bins_per_wake_turn
-                    self._accumulated_data[j_from:j_to] = self._accumulated_data[j_from:j_to] + self._new_real_wake_data[k_from:k_to]
+                    if self._n_bins_per_wake_turn == self._n_bins_per_turn:
+                        
+                        j_from = i*self._n_bins_per_turn
+                        j_to = j_from + 2*self._n_bins_per_turn
+                        k_from = 2*i*self._n_bins_per_turn
+                        k_to = k_from + 2*self._n_bins_per_turn
+                        self._accumulated_data[j_from:j_to] = self._accumulated_data[j_from:j_to] + self._new_real_wake_data[k_from:k_to]
+                    
+                    else:
+                        
+                        j_from = i*self._n_bins_per_turn
+                        j_to = j_from + self._n_bins_per_wake_turn
+                        k_from = 2*i*self._n_bins_per_wake_turn
+                        k_to = k_from + self._n_bins_per_wake_turn
+                        self._accumulated_data[j_from:j_to] = self._accumulated_data[j_from:j_to] + self._new_real_wake_data[k_from:k_to]
+                        j_from = (i+1)*self._n_bins_per_turn
+                        j_to = j_from + self._n_bins_per_wake_turn
+                        k_from = (2*i+1)*self._n_bins_per_wake_turn
+                        k_to = k_from + self._n_bins_per_wake_turn
+                        self._accumulated_data[j_from:j_to] = self._accumulated_data[j_from:j_to] + self._new_real_wake_data[k_from:k_to]
                 
             elif convolution == 'circular':
                 np.copyto(self._accumulated_data,
